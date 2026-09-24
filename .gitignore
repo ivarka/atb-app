@@ -1,0 +1,10 @@
+node_modules/
+.expo/
+dist/
+test-results/
+playwright-report/
+.env*.local
+.DS_Store
+.local/
+android/
+artifacts/
