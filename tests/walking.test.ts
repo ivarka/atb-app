@@ -8,7 +8,7 @@ afterEach(() => vi.unstubAllGlobals());
 it('gir GPS et stedsnavn uten å flytte koordinatene til holdeplassen', async () => {
   vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ features: [{ properties: { label: 'Munkegata, Trondheim', distance: .03, id: 'NSR:StopPlace:1' }, geometry: { coordinates: [1, 2] } }] }))));
   const result = await namePosition(DEMO_FROM);
-  expect(result).toEqual({ name: 'Ved Munkegata, Trondheim', latitude: DEMO_FROM.latitude, longitude: DEMO_FROM.longitude });
+  expect(result).toEqual({ source: 'gps', name: 'Ved Munkegata, Trondheim', latitude: DEMO_FROM.latitude, longitude: DEMO_FROM.longitude });
 });
 it('beholder brukbare GPS-koordinater ved feil i navneoppslaget', async () => {
   vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', { status: 503 })));

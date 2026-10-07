@@ -7,6 +7,7 @@ test('ikoner og fremdrift for trikk, tog og båt', async ({ page }) => {
   await page.getByRole('button', { name: 'Finn reiser' }).click();
   await page.getByRole('button', { name: 'Følg reisen' }).first().click();
   await page.getByRole('button', { name: 'Båt, trikk og tog', exact: true }).click();
+  await page.getByRole('button', { name: 'Vis steg for steg', exact: true }).click();
   for (const name of ['Båt', 'Trikk', 'Tog']) await expect(page.getByRole('img', { name, exact: true }).first()).toBeVisible();
   await page.getByRole('button', { name: 'Jeg er om bord', exact: true }).click();
   await expect(page.getByText('Om bord på trikk 9', { exact: true })).toBeVisible();

@@ -41,7 +41,7 @@ test('GPS-avstigning krever bekreftelse og søker fra faktisk koordinat', async 
     await page.evaluate(p => (window as any).gpsCallback({ timestamp: p.timestamp, coords: { latitude: p.place.latitude, longitude: p.place.longitude, accuracy: p.accuracy } }), p);
   }
   await expect(page.getByText('Har du gått av her?', { exact: true })).toBeVisible();
-  await expect(page.getByText('Om bord på buss 3', { exact: true })).toBeVisible();
+  await expect(page.getByText(/Steg .*Om bord på buss 3/)).toBeVisible();
   expect(requests).toBe(before);
   await page.getByRole('button', { name: 'Nei, jeg er fortsatt om bord', exact: true }).click();
   await page.evaluate(p => (window as any).gpsCallback({ timestamp: p.timestamp + 1, coords: { latitude: p.place.latitude, longitude: p.place.longitude, accuracy: 10 } }), samples[3]);

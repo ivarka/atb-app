@@ -16,7 +16,7 @@ test('egen reiseside, faktisk avstigning, godta og gjenåpne', async ({ page }) 
   await expect(page.getByText(/Steg 3 av 8/)).toBeVisible();
   await page.getByRole('button', { name: '← Planlegg reise', exact: true }).click();
   await page.getByRole('button', { name: 'Til aktiv reise', exact: true }).click();
-  await expect(page.getByText('Om bord på buss 3', { exact: true })).toBeVisible();
+  await expect(page.getByText(/Steg .*Om bord på buss 3/)).toBeVisible();
   await page.getByRole('button', { name: 'Jeg har gått av', exact: true }).click();
   await page.getByRole('button', { name: 'Jeg gikk av på Studentersamfundet', exact: true }).click();
   await expect(page.getByText('Må oppdateres fra der du er', { exact: true })).toBeVisible();
@@ -27,6 +27,7 @@ test('egen reiseside, faktisk avstigning, godta og gjenåpne', async ({ page }) 
   await expect(page.getByTestId('recovery-option')).toHaveCount(2);
   await page.getByRole('button', { name: 'Velg denne videre reisen', exact: true }).first().click();
   await expect(page.getByText('Må oppdateres fra der du er', { exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Vis steg for steg', exact: true }).click();
   await expect(page.getByText('Vent på buss 21', { exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

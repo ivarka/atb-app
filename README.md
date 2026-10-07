@@ -2,7 +2,7 @@
 
 En uavhengig reiseassistent for buss, båt, trikk og tog i Trøndelag. Appen planlegger reisen, følger oppdaterte tider og foreslår alternativer når reisen endrer seg. Bygget med React Native, Expo, React Native Web og TypeScript, for nettleser og Android.
 
-**Gjeldende appversjon: 1.0.5 · Android-versjonskode: 6.** Versjonen styres av `app.json`; `package.json` har separat pakkeversjon.
+**Gjeldende appversjon: 1.0.6 · Android-versjonskode: 7.** Versjonen styres av `app.json`; `package.json` har separat pakkeversjon.
 
 Ingen innlogging, API-nøkkel eller egen server kreves. Appen bruker Entur direkte. Overvåking fungerer mens appen er åpen og aktiv; bakgrunnsovervåking og pushvarsler er ikke implementert.
 
@@ -28,11 +28,21 @@ Dette eksporterer nettsiden til `dist/`, uten å publisere den. Posisjon i nettl
 
 ## Slik brukes appen
 
-1. Velg fra- og tilsted, avreisetid og prioritering: **Balansert**, **Raskest** eller **Tryggest**. «Min posisjon» viser et stedsnavn når navneoppslaget lykkes, men beholder de faktiske GPS-koordinatene.
-2. Legg eventuelt til planlagte stopp i ønsket rekkefølge.
+1. Start med tomme **Fra**- og **Til – reisemål**-felt. Et tomt felt viser sist brukte steder; skriving filtrerer historikken og henter separate søkeforslag. Velg tidspunkt og prioritering under **Reisevalg**: **Balansert**, **Raskest** eller **Tryggest**. «Min posisjon» viser et stedsnavn når navneoppslaget lykkes, men beholder de faktiske GPS-koordinatene.
+2. Trykk **+ Legg til mellomstopp** under reisemålet. Trykk på et valgt stopp for å endre opphold, flytte eller fjerne det.
 3. Søk og velg **Følg reisen**. En egen reiseside viser gjeldende steg, neste handling, tider og varsler.
 4. Bekreft fremdrift med «Jeg er på holdeplassen», «Jeg er om bord», «Jeg har gått av» og «Jeg er fremme». Klokken alene flytter aldri brukeren videre.
-5. Godta et alternativ for å bytte reise. Tilbake til planlegging bevarer reisen; **Avslutt og start på nytt** fjerner aktiv reise og gamle søkeresultater, men beholder prioriteringen.
+5. Godta et alternativ for å bytte reise. Tilbake til planlegging bevarer reisen; **Avslutt og start på nytt** fjerner aktiv reise og gamle søkeresultater, men beholder prioriteringen og stedshistorikken.
+
+### Avganger og uplanlagt påstigning
+
+**Avganger** åpner avgangstavlen. Søk etter holdeplass, eller bruk **Finn holdeplasser nær meg** og velg selv. Tavlen vises også under ventesteget på aktiv reise. Den viser ti avganger innen én time med retning, plattform/kai, tider og datakvalitet. Innstilte avganger kan ikke velges. Tavlen oppdateres høyst hvert 30. sekund mens den er synlig og appen er aktiv. Samme holdeplassoppslag deles i appen; feil gjør gamle data usikre.
+
+**Planlegg med denne** beregner en reise med valgt avgang, uten å registrere påstigning. **Jeg er allerede om bord** / **Jeg er på en annen avgang** lar deg velge en konkret avgang ved påstigningsstedet, også fra siste 30 minutter. Tidsrommet kan utvides til tre timer. Bruk retning og tidspunkt, ikke bare linjenummer, for å identifisere avgangen.
+
+Når påstigning bekreftes, lagres transporten straks. Reisemål og gjenstående stopp beholdes selv om videreberegningen feiler. Ukjent fremdrift krever at du velger neste stopp. Appen undersøker opptil tre kommende avstigningssteder, beholder transporten frem dit og viser videreforslag. **Følg denne videreplanen** godkjenner ruten. Ved feil kan du prøve igjen, korrigere avgangen eller bekrefte avstigning. Gjenåpning bevarer bekreftet transport før videreplan er valgt.
+
+Full tidslinje og detaljer åpnes ved behov på reisesiden. Lokal stedshistorikk inneholder inntil ti unike valgte steder fra innsendte søk. Enkeltsteder og hele listen kan slettes fra nedtrekkslisten. Fritekst, demosteder og GPS-koordinater lagres ikke i denne historikken. Ingen synkronisering mellom enheter.
 
 ### Planlagte stopp og opphold
 
@@ -64,7 +74,7 @@ GPS kan foreslå påstigning og, ved sterkere bevegelsesgrunnlag, registrere på
 
 GPS er en bevegelsesvurdering, ikke sikker identifikasjon av kjøretøyet. **Deteksjonen må fortsatt valideres på ekte reiser med fysisk telefon.** GPS-historikk finnes bare i minnet. Målingene utløser ikke ekstra API-kall; vanlige rutinesøk kan bruke siste posisjon.
 
-Aktiv reise, stopp, opphold og prioritering lagres lokalt under `underveis.v1`. Android bruker en SQLite-basert adapter for lokal lagring. Eldre reiser migreres uten å konstruere et faktisk avstigningssted fra planen. Ved gjenåpning oppdateres data før nye råd vises. Det finnes ingen egen server med reisehistorikk, men søk og koordinater sendes til Entur.
+Aktiv reise, bekreftet transport uten videreplan, stopp, opphold og prioritering lagres lokalt under `underveis.v1`. Android bruker en SQLite-basert adapter for lokal lagring. Eldre reiser migreres uten å konstruere et faktisk avstigningssted fra planen. Ved gjenåpning oppdateres data før nye råd vises. Det finnes ingen egen server med reisehistorikk, men søk og koordinater sendes til Entur.
 
 ## Entur og API-trafikk
 
@@ -79,6 +89,8 @@ Ved `429` respekteres `Retry-After` og `Rate-Limit-Expiry-Time`; uten lesbare he
 ## Demo og tester
 
 Demo bruker fiktive reiser og tider, uten ekte API-kall. Test forsinkelse, knapp/tapt overgang, innstilling, manglende sanntid, nettverksfeil, innhentet forsinkelse og kombinerte transportmidler. Gjenåpning av demo tilbakestiller hendelsesscenarioet til «I rute».
+
+For avgangstavle: velg demo og **Avganger**. To avganger har samme linjenummer og forskjellig retning; en båtavgang er innstilt. Prøv **Jeg er allerede om bord**, bekreft avgangen, velg neste stopp og godta en videreplan.
 
 For stopp: legg til et demosted, velg Opphold, følg reisen og bekreft besøket. «Jeg har gått til Studentersamfundet» tester videreføring fra et annet sted. Reisevalg lar deg teste endring og avbrytelse av stopplisten.
 
@@ -101,6 +113,7 @@ Disse kontrollene bruker ekte Entur-data og krever nett. Resultater avhenger av 
 npm run verify:live
 npx tsx scripts/verify-modes.ts
 npx tsx scripts/verify-stops.ts
+npx tsx scripts/verify-departures.ts
 ATB_LIVE=1 npm run test:e2e -- e2e/live.spec.ts
 ```
 
@@ -114,17 +127,19 @@ npm run build:apk
 
 Bygget krever JDK 17 eller nyere, Android SDK-plattform 36, Build Tools 36.0.0, NDK 27.1.12297006 og CMake 3.22.1. Sett `JAVA_HOME` og `ANDROID_HOME` ved andre installasjonssteder. Skriptets lokale standard er `.local/android-sdk` og en Homebrew-installasjon av JDK 17; Gradle-bufferen ligger under `.local`.
 
-Skriptet kjører Expo prebuild og lager `artifacts/underveis-1.0.5.apk` med SHA-256-fil. APK-en inneholder ARM64 og ARMv7, bruker pakkenavnet `no.ika.underveis` og kjører uten Metro eller PC. Den trenger internett for Entur-oppslag. Ingen publisering til Google Play eller Expo skjer.
+Skriptet kjører Expo prebuild og lager `artifacts/underveis-1.0.6.apk` med SHA-256-fil. APK-en inneholder ARM64 og ARMv7, bruker pakkenavnet `no.ika.underveis` og kjører uten Metro eller PC. Den trenger internett for Entur-oppslag. Ingen publisering til Google Play eller Expo skjer.
 
 Signeringsnøkkelen gjenbrukes for kompatible oppdateringer. Ta privat sikkerhetskopi av `.local/underveis.keystore` og `.local/android-signing-password`. **Ikke legg disse i Git, logg passordet eller del `.local`-mappen.**
 
-Del bare artefaktmappen på et betrodd lokalnett:
+Del kun denne utgivelsen fra en egen mappe på et betrodd lokalnett:
 
 ```sh
-python3 -m http.server 8082 --bind <PC-ens-lokalnett-IP> --directory artifacts
+mkdir -p /tmp/underveis-share-1.0.6
+cp artifacts/underveis-1.0.6.apk artifacts/underveis-1.0.6.apk.sha256 /tmp/underveis-share-1.0.6/
+python3 -m http.server 8082 --bind <PC-ens-lokalnett-IP> --directory /tmp/underveis-share-1.0.6
 ```
 
-Bytt ut plassholderen med maskinens nåværende IP, og åpne `http://<PC-ens-lokalnett-IP>:8082/underveis-1.0.5.apk` på telefonen. Begge må være på samme nett, og nettverket må tillate forbindelsen. Stopp serveren med Ctrl+C etter overføring. IP-adressen er ikke fast. APK-en kan installeres som oppdatering når signeringsnøkkelen er den samme.
+Bytt ut plassholderen med maskinens nåværende IP, og åpne `http://<PC-ens-lokalnett-IP>:8082/underveis-1.0.6.apk` på telefonen. Begge må være på samme nett, og nettverket må tillate forbindelsen. Stopp serveren med Ctrl+C etter overføring. IP-adressen er ikke fast. APK-en kan installeres som oppdatering når signeringsnøkkelen er den samme.
 
 ## Kodestruktur
 

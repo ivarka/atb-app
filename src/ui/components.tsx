@@ -1,3 +1,4 @@
+import { useRecentPlaces, removeRecentPlace, clearRecentPlaces } from '../platform/recentPlaces';
 import { transport, vehicleName } from '../domain/transport';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -6,46 +7,58 @@ import { arrival, transitLegs, departure, isFresh, minutes, time, transfers } fr
 import { Journey, Place, Preference, TravelAlert, TransportMode } from '../domain/types';
 import { colors, s } from './theme';
 
-export function Button({ label, onPress, secondary, disabled, small, testID }: { label: string; onPress: () => void; secondary?: boolean; disabled?: boolean; small?: boolean; testID?: string }) {
-  return <Pressable testID={testID} accessibilityRole="button" accessibilityLabel={label} disabled={disabled} onPress={onPress} style={({ pressed }) => [styles.button, secondary && styles.secondary, small && { paddingVertical: 9, paddingHorizontal: 14 }, { opacity: disabled ? 0.45 : pressed ? 0.75 : 1 }]}>
+export function Button({ label, onPress, secondary, disabled, small, testID, accessibilityLabel }: { accessibilityLabel?: string; label: string; onPress: () => void; secondary?: boolean; disabled?: boolean; small?: boolean; testID?: string }) {
+  const [focused, setFocused] = useState(false);
+  return <Pressable onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} testID={testID} accessibilityRole="button" accessibilityLabel={accessibilityLabel ?? label} disabled={disabled} onPress={onPress} style={({ pressed }) => [styles.button, { minHeight: 44, justifyContent: "center" }, focused && { outlineWidth: 3, outlineColor: colors.green, outlineOffset: 2 }, secondary && styles.secondary, small && { paddingVertical: 9, paddingHorizontal: 14 }, { opacity: disabled ? 0.45 : pressed ? 0.75 : 1 }]}>
     <Text style={{ color: secondary ? colors.ink : colors.white, fontSize: small ? 13 : 15, fontWeight: '600' }}>{label}</Text>
   </Pressable>;
 }
 
-export function PlaceField({ label, value, onChange, demo }: { label: string; value?: Place; onChange: (p?: Place) => void; demo: boolean }) {
+const closePlaceLists = new Set<() => void>();
+export function PlaceField({ label, value, onChange, demo, onPosition, stopsOnly = false, placeholder }: { label: string; value?: Place; onChange: (p?: Place) => void; demo: boolean; onPosition?: () => void; stopsOnly?: boolean; placeholder?: string }) {
   const [text, setText] = useState(value?.name ?? '');
   const [options, setOptions] = useState<Place[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [focused, setFocused] = useState(false);
-  const version = useRef(0);
-  useEffect(() => { if (value) { setText(value.name); setOptions([]); } }, [value]);
+  const version = useRef(0), editing = useRef(false);
+  const input = useRef<TextInput>(null);
+  const recent = useRecentPlaces().map(r => r.place).filter(p => (!stopsOnly || p.id?.startsWith('NSR:StopPlace:')) && p.name.toLocaleLowerCase().includes(text.toLocaleLowerCase()));
+  function choose(p?: Place) { version.current++; editing.current = false; setText(p?.name ?? ''); setOptions([]); setError(''); setFocused(false); onChange(p); }
+  useEffect(() => { if (value) editing.current = false; if (value || !editing.current) { setText(value?.name ?? ''); setOptions([]); } }, [value]);
+  useEffect(() => { const close = () => { version.current++; setFocused(false); setOptions([]); }; closePlaceLists.add(close); return () => { closePlaceLists.delete(close); }; }, []);
   useEffect(() => {
     if (demo || value || text.length < 2 || !focused) { setLoading(false); return; }
-    const controller = new AbortController();
-    const id = ++version.current;
+    const controller = new AbortController(); const id = ++version.current;
     setError('');
     const timer = setTimeout(() => {
       setLoading(true);
       autocomplete(text, controller.signal).then(list => {
-        if (id !== version.current) return;
-        setOptions(list); setError(list.length ? '' : 'Ingen treff i Trøndelag. Prøv et mer presist navn.');
-      }).catch(e => { if (!controller.signal.aborted) setError(e.message ?? 'Stedssøket feilet.'); }).finally(() => { if (id === version.current) setLoading(false); });
+        if (id !== version.current || controller.signal.aborted) return;
+        const filtered = stopsOnly ? list.filter(p => p.id?.startsWith('NSR:StopPlace:')) : list;
+        setOptions(filtered); setError(filtered.length ? '' : 'Ingen treff i Trøndelag. Prøv et mer presist navn.');
+      }).catch(e => { if (id === version.current && !controller.signal.aborted) setError(e.message ?? 'Stedssøket feilet.'); }).finally(() => { if (id === version.current) setLoading(false); });
     }, 300);
     return () => { clearTimeout(timer); controller.abort(); version.current++; };
-  }, [text, value, focused, demo]);
+  }, [text, value, focused, demo, stopsOnly]);
   return <View style={{ gap: 8 }}>
     <Text style={s.label}>{label}</Text>
-    <View style={[styles.inputWrap, focused && { borderColor: colors.green }]}>
-      <View style={[styles.dot, label === 'Til' && { borderRadius: 3, backgroundColor: colors.ink }]} />
-      <TextInput accessibilityLabel={label} placeholder={label === 'Fra' ? 'Hvor reiser du fra?' : 'Hvor skal du?'} placeholderTextColor={colors.muted} value={text} editable={!demo} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
-        onChangeText={t => { setText(t); setOptions([]); onChange(undefined); }} style={styles.input} />
+    <View style={[styles.inputWrap, focused && { borderColor: colors.green, borderWidth: 2 }]}>
+      <TextInput ref={input} accessibilityLabel={label} placeholder={placeholder ?? (label === 'Fra' ? 'Hvor reiser du fra?' : label.startsWith('Til') ? 'Hvor vil du ende reisen?' : 'Søk etter et sted')} placeholderTextColor={colors.muted} value={text} editable={!demo} onFocus={() => { closePlaceLists.forEach(close => close()); setFocused(true); }}
+        onKeyPress={e => { if (e.nativeEvent.key === 'Escape') { version.current++; setFocused(false); setOptions([]); input.current?.blur(); } }}
+        onChangeText={t => { version.current++; editing.current = true; setText(t); setOptions([]); onChange(undefined); setFocused(true); }} style={styles.input} />
       {loading && <ActivityIndicator size="small" color={colors.green} />}
+      {!!text && !demo && <Button small secondary label="×" accessibilityLabel={`Tøm ${label}`} onPress={() => { choose(); setFocused(true); input.current?.focus(); }} />}
     </View>
-    {options.length > 0 && <View style={styles.options}>{options.map((p, i) => <Pressable key={`${p.id}-${i}`} accessibilityRole="button" onPress={() => { onChange(p); setText(p.name); setOptions([]); setError(''); }} style={({ pressed }) => ({ padding: 12, backgroundColor: pressed ? colors.soft : colors.white, borderBottomWidth: i < options.length - 1 ? 1 : 0, borderColor: colors.border })}>
-      <Text style={s.text}>{p.name}</Text><Text style={s.muted}>{p.id?.startsWith('NSR:') ? 'Holdeplass' : 'Adresse eller sted'}</Text>
-    </Pressable>)}</View>}
-    {!!error && <Text style={[s.muted, { color: colors.amber }]}>{error}</Text>}
+    {focused && !demo && !value && <View style={styles.options}>
+      {onPosition && !text && <Button secondary label="Min posisjon" onPress={() => { setFocused(false); onPosition(); }} />}
+      {!!recent.length && <><Text style={[s.label, { padding: 12 }]}>Sist brukte steder</Text>{recent.map(p => <View key={p.id ?? `${p.latitude}:${p.longitude}`} style={[s.row, { padding: 6 }]}><View style={{ flex: 1 }}><Button secondary label={p.name} onPress={() => choose(p)} /></View><Button small secondary label="×" accessibilityLabel={`Fjern ${p.name} fra sist brukte`} onPress={() => removeRecentPlace(p)} /></View>)}<Button small secondary label="Tøm sist brukte steder" onPress={clearRecentPlaces} /></>}
+      {!!options.length && <Text style={[s.label, { padding: 12 }]}>Søkeforslag</Text>}
+      {options.map((p, i) => <Button key={`${p.id}-${i}`} secondary label={p.name} onPress={() => choose(p)} />)}
+      {!text && !recent.length && <Text style={[s.muted, { padding: 12 }]}>Steder du bruker i reisesøk vil vises her.</Text>}
+      <Button small secondary label="Lukk stedsliste" onPress={() => { version.current++; setFocused(false); setOptions([]); input.current?.blur(); }} />
+    </View>}
+    {!!error && <Text accessibilityRole="alert" style={[s.muted, { color: colors.amber }]}>{error}</Text>}
   </View>;
 }
 
@@ -123,6 +136,6 @@ const styles = StyleSheet.create({
   secondary: { backgroundColor: colors.soft }, inputWrap: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 14, minHeight: 54, backgroundColor: '#FAFBF8' },
   input: { flex: 1, color: colors.ink, fontSize: 15, paddingVertical: 15, outlineWidth: 0 } as any,
   dot: { height: 10, width: 10, borderWidth: 2, borderRadius: 5, borderColor: colors.ink }, options: { borderWidth: 1, borderColor: colors.border, borderRadius: 10, overflow: 'hidden' },
-  segment: { flexDirection: 'row', padding: 4, backgroundColor: colors.paper, borderRadius: 10, gap: 3 }, segmentItem: { flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 7, borderWidth: 1, borderColor: 'transparent' },
+  segment: { flexDirection: 'row', padding: 4, backgroundColor: colors.paper, borderRadius: 10, gap: 3 }, segmentItem: { flex: 1, alignItems: 'center', minHeight: 44, justifyContent: "center", paddingVertical: 10, borderRadius: 7, borderWidth: 1, borderColor: 'transparent' },
   badge: { backgroundColor: colors.green, paddingVertical: 4, paddingHorizontal: 10, borderRadius: 6, minWidth: 32, alignItems: 'center' }, transfer: { marginLeft: 29, padding: 10, marginBottom: 16, borderRadius: 8 },
 });

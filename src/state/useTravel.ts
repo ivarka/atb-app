@@ -1,3 +1,7 @@
+import { departureCalls } from '../api/departures';
+import { demoDepartureCalls } from '../demo/departures';
+import { confirmedRide, departureLeg, routesWithDeparture, upcomingPosition } from '../domain/departures';
+import { rememberPlaces } from '../platform/recentPlaces';
 import { activeRequest, routeRequest, markStop, nextPause, observedStops, samePlace, isTransitStop } from '../domain/stops';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { entur, namePosition } from '../api/entur';
@@ -8,7 +12,7 @@ import { loadSaved, saveState } from '../platform/storage';
 import { isForeground, onVisibilityChange } from '../platform/visibility';
 import { locate, watchPosition } from '../platform/location';
 import { BoardingEvidence, detectBoarding, distance } from '../domain/boarding';
-import { Place, Progress, PlannedStop } from '../domain/types';
+import { Place, Progress, PlannedStop, Departure } from '../domain/types';
 import { isWalkingJourney, shouldCheckWalking, shortWalks } from '../domain/walking';
 import { initialProgress } from '../domain/progress';
 import { afterAlighting, alightingPlace, AlightingEvidence, detectAlighting, usablePosition } from '../domain/alighting';
@@ -47,6 +51,7 @@ export function useTravel() {
   const [stopBusy, setStopBusy] = useState(false);
   const [resumePlace, setResumePlace] = useState(false);
   const stopRequest = useRef(0);
+  const [rideChoices, setRideChoices] = useState<Journey[]>([]);
   const [recovery, setRecovery] = useState<Journey[]>([]);
 
   const [demoBase, setDemoBase] = useState(saved?.active?.demoBase ?? Date.now());
@@ -59,6 +64,7 @@ export function useTravel() {
   current.current = active;
 
   const mutate = (next: ActiveJourney | null) => {
+    setRideChoices([]);
     generation.current++; walkRequest.current++; stopRequest.current++; setStopChoices([]); setStopBusy(false); setResumePlace(false); setWalkingBusy(false); setWalkingChoice(null);
     if (next) {
       next = observedStops(next, Date.now());
@@ -88,6 +94,24 @@ export function useTravel() {
     setBusy(true);
     const provider = snapshot.demo ? demoProvider(snapshot.demoBase ?? demoBase, scenario) : entur;
     try {
+      if (snapshot.pendingRide) {
+        const ride = snapshot.pendingRide;
+        const calls = snapshot.demo ? demoDepartureCalls(ride.departure) : await departureCalls(ride.departure);
+        if (generation.current !== token) return;
+        const checkedAt = Date.now();
+        const updated = { ...snapshot, journey: { ...snapshot.journey, fetchedAt: checkedAt, legs: [departureLeg({ ...ride.departure, checkedAt }, calls.at(-1), calls)] } };
+        current.current = updated; setActive(updated); setReady(true); setError('');
+        const next = upcomingPosition(ride,calls,checkedAt,checkedAt,positionRef.current);
+        if (next === undefined) { setRideChoices([]); return; }
+        if (force || checkedAt-lastAlternatives.current>=60000) {
+          lastAlternatives.current = checkedAt;
+          const options = await routesWithDeparture({ ...ride.departure, checkedAt },calls,next,snapshot.destination,snapshot.stops ?? [],preference,provider,true,ride.previousExit,() => generation.current===token && isForeground());
+          if (generation.current !== token) return;
+          setRideChoices(options);
+          if (!options.length) setError('Ingen videre reiser funnet. Avgangen du sitter på er beholdt. Prøv igjen.');
+        }
+        return;
+      }
       if (snapshot.walkingOnly) {
         setReady(true);
         if (!force && Date.now() - lastAlternatives.current < 60000) return;
@@ -159,7 +183,7 @@ export function useTravel() {
       if (generation.current !== token) return;
       const stale = { ...snapshot, journey: { ...snapshot.journey, legs: snapshot.journey.legs.map((l, i) => i >= snapshot.progress.legIndex && l.mode !== 'foot' ? { ...l, quality: 'stale' as const } : l) } };
       current.current = stale;
-      setActive(stale); setReady(true); setRecommendation(null); setRecovery([]); setError(message(e));
+      setActive(stale); setRideChoices([]); setReady(true); setRecommendation(null); setRecovery([]); setError(message(e));
     } finally {
       if (inFlight.current === token) inFlight.current = null;
       if (generation.current === token) setBusy(false);
@@ -185,6 +209,7 @@ export function useTravel() {
       if (samples.length && p.timestamp <= samples[samples.length - 1].timestamp) return;
       if (samples.length && p.timestamp - samples[samples.length - 1].timestamp > 45000) samples = [];
       samples = [...samples, p].filter(s => p.timestamp - s.timestamp <= 480000).slice(-120);
+      if (snapshot.pendingRide) return;
       if (snapshot.progress.phase === 'onboard') {
         const stop = (snapshot.stops ?? []).find(s => !s.visited);
         const leg = snapshot.journey.legs[snapshot.progress.legIndex];
@@ -233,13 +258,14 @@ export function useTravel() {
     void cycle(true);
     const timer = setInterval(() => { void cycle(); }, 30000);
     return () => clearInterval(timer);
-  }, [!!active, active?.startedAt, active?.progress, cycle]);
+  }, [!!active, active?.startedAt, active?.progress, active?.pendingRide, cycle]);
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 10000);
     return () => clearInterval(timer);
   }, []);
   useEffect(() => {
     const visibility = () => {
+      setRideChoices([]);
       generation.current++; stopRequest.current++; setStopBusy(false); setStopChoices([]); setResumePlace(false); walkRequest.current++; setWalkingBusy(false); setWalkingChoice(null);
       setRecommendation(null); setRecovery([]); setAlighting(null); setChoosingAlight(false); setLocatingAlight(false); setReady(false); setBusy(false);
       if (!isForeground()) setPaused(true);
@@ -250,6 +276,7 @@ export function useTravel() {
   useEffect(() => () => { generation.current++; searchId.current++; stopRequest.current++; walkRequest.current++; }, []);
 
   async function search(request: SearchRequest) {
+    if (!demo) rememberPlaces([request.to, request.from, ...(request.stops ?? []).map(s => s.place)]);
     const id = ++searchId.current;
     setSearching(true); setError(''); setResults([]);
     const base = Date.now();
@@ -299,6 +326,34 @@ export function useTravel() {
     mutate({ ...active, progress: { ...active.progress, phase: 'alighted', step: 'arrived', legIndex: active.journey.legs.length, needsReplan: false, confirmedAt: Date.now() } });
   }
 
+  function alightFromCurrent(snapshot: ActiveJourney, place: Place): ActiveJourney {
+    const next = afterAlighting(snapshot,place,Date.now());
+    return snapshot.pendingRide ? { ...next, pendingRide: undefined, walkingOnly: false, progress: { ...next.progress, needsReplan: true } } : next;
+  }
+  function boardDeparture(d: Departure, destination: Place) {
+    if (d.cancelled || !d.boarding || Date.now()-d.checkedAt>=90000) { setError('Hent avgangen på nytt før du bekrefter.'); return false; }
+    if (!demo) rememberPlaces([destination]);
+    const next = confirmedRide(d,destination,Date.now(),current.current,demo);
+    mutate(next); saveState(next,preference); return true;
+  }
+  function confirmNextCall(position: number) {
+    const snapshot = current.current;
+    if (!snapshot?.pendingRide || !snapshot.journey.legs[0].calls?.some(c => c.position === position && c.position>snapshot.pendingRide!.departure.position && !c.actualDeparture && !c.cancelled)) return;
+    mutate({ ...snapshot, pendingRide: { ...snapshot.pendingRide, nextPosition: position, nextConfirmedAt: Date.now() } });
+  }
+  function acceptRide(journey: Journey) {
+    const snapshot = current.current;
+    if (!snapshot?.pendingRide || !rideChoices.includes(journey) || Date.now()-journey.fetchedAt>=90000) return;
+    const leg = snapshot.journey.legs[0];
+    const next = upcomingPosition(snapshot.pendingRide,leg.calls ?? [],Date.now(),leg.checkedAt,positionRef.current);
+    if (next === undefined || next>(journey.legs[0].toPosition ?? 0)) { setRideChoices([]); setError('Fremdriften må bekreftes på nytt før du velger videreplan.'); return; }
+    mutate({ ...snapshot, pendingRide: undefined, journey, progress: { phase: 'onboard', step: 'onboard', legIndex: 0, confirmedAt: snapshot.progress.confirmedAt } });
+  }
+  function followDeparture(journey: Journey, destination: Place) {
+    if (current.current?.progress.phase === 'onboard') { setError('Bekreft avstigning før du planlegger en annen påstigning.'); return false; }
+    if (Date.now()-journey.fetchedAt>=90000 || !feasible(journey,Date.now())) { setError('Avgangen kan ha gått. Hent et nytt forslag.'); return false; }
+    mutate({ journey, destination, origin: journey.legs[0].from, stops: current.current?.stops ?? [], demo, startedAt: Date.now(), progress: initialProgress(journey,Date.now()) }); return true;
+  }
   async function confirmAlight() {
     const snapshot = current.current;
     if (!snapshot || snapshot.progress.phase !== 'onboard') return;
@@ -311,7 +366,7 @@ export function useTravel() {
       if (!usablePosition(p, Date.now())) throw new Error('Posisjonen er for usikker. Velg hvor du gikk av.');
       positionRef.current = p; setPosition(p);
       const latest = current.current!;
-      mutate(afterAlighting(latest, alightingPlace(latest, p), Date.now()));
+      mutate(alightFromCurrent(latest, alightingPlace(latest, p)));
     } catch (e) {
       if (generation.current === token) { setChoosingAlight(true); setError(message(e)); }
     } finally { if (generation.current === token) setLocatingAlight(false); }
@@ -320,7 +375,7 @@ export function useTravel() {
   function chooseAlightingPlace(place: Place) {
     const snapshot = current.current;
     if (!snapshot) return;
-    if (snapshot.progress.phase === 'onboard') mutate(afterAlighting(snapshot, place, Date.now()));
+    if (snapshot.progress.phase === 'onboard') mutate(alightFromCurrent(snapshot, place));
     else mutate({ ...snapshot, progress: { ...snapshot.progress, place, locationVerified: true, needsReplan: true, confirmedAt: Date.now() } });
   }
 
@@ -440,13 +495,14 @@ export function useTravel() {
     saveState(null, preference);
   }
 
-  function changePreference(p: Preference) { generation.current++; stopRequest.current++; setStopChoices([]); setStopBusy(false); setLocatingAlight(false); setBusy(false); setPreference(p); setRecommendation(null); setRecovery([]); lastAlternatives.current = 0; }
-  function changeScenario(s: Scenario) { generation.current++; stopRequest.current++; setStopChoices([]); setStopBusy(false); setLocatingAlight(false); setBusy(false); setScenario(s); setRecommendation(null); lastAlternatives.current = 0; }
+  function changePreference(p: Preference) { setRideChoices([]); generation.current++; stopRequest.current++; setStopChoices([]); setStopBusy(false); setLocatingAlight(false); setBusy(false); setPreference(p); setRecommendation(null); setRecovery([]); lastAlternatives.current = 0; }
+  function changeScenario(s: Scenario) { setRideChoices([]); generation.current++; stopRequest.current++; setStopChoices([]); setStopBusy(false); setLocatingAlight(false); setBusy(false); setScenario(s); setRecommendation(null); lastAlternatives.current = 0; }
   function changeMode(value: boolean) {
     searchId.current++; mutate(null); setBusy(false); setSearching(false); setDemo(value); setScenario('normal'); setResults([]); setDemoBase(Date.now());
   }
 
   return { active, preference, demo, scenario, results: rankJourneys(results, preference, now), recommendation: ready && !paused && !choosingAlight && !locatingAlight && recommendation && now - recommendation.journey.fetchedAt < 90000 ? recommendation : null,
+    boardDeparture, followDeparture, confirmNextCall, acceptRide, rideChoices: ready && !paused ? rideChoices.filter(j => now-j.fetchedAt<90000) : [],
     findStopRoutes, acceptStopRoute, confirmPlannedStop, stopChoices: paused ? [] : stopChoices, stopBusy, resumePlace,
     cancelStopRoutes: () => { stopRequest.current++; setStopChoices([]); setStopBusy(false); setResumePlace(false); },
     error, busy, searching, ready, paused, resumed, now, position, restartKey,

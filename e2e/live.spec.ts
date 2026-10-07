@@ -7,7 +7,9 @@ test('ekte Entur-data kan hentes direkte fra nettleseren', async ({ page }) => {
   await page.goto('/');
   await page.screenshot({ path: 'test-results/underveis-desktop.png', fullPage: true });
   await page.getByRole('textbox', { name: 'Fra', exact: true }).fill('Munkegata');
-  await page.getByRole('button', { name: 'Munkegata, Trondheim Holdeplass', exact: true }).click();
+  await page.getByRole('button', { name: 'Munkegata, Trondheim', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Til – reisemål', exact: true }).fill('Lerkendal');
+  await page.getByRole('button', { name: 'Lerkendal, Trondheim', exact: true }).first().click();
   await page.getByRole('button', { name: 'Finn reiser' }).click();
   await expect(page.getByText('Dine reiseforslag')).toBeVisible({ timeout: 30000 });
   await page.getByRole('button', { name: 'Følg reisen' }).first().click();

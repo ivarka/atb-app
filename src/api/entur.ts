@@ -11,7 +11,7 @@ export function supportedLeg(mode: string, authority?: string): boolean {
 const HEADERS = { 'Content-Type': 'application/json', 'ET-Client-Name': 'ika-underveis' };
 const ENDPOINT = 'https://api.entur.io/journey-planner/v3/graphql';
 const PLACE = 'name latitude longitude quay { id publicCode stopPlace { id } }';
-const CALL = `quay { id name latitude longitude publicCode stopPlace { id } }
+export const CALL = `quay { id name latitude longitude publicCode stopPlace { id } }
   stopPositionInPattern aimedArrivalTime expectedArrivalTime aimedDepartureTime expectedDepartureTime
   actualDepartureTime realtime predictionInaccurate cancellation forAlighting`;
 const LEGS = `mode aimedStartTime expectedStartTime aimedEndTime expectedEndTime realtime duration distance serviceDate
@@ -46,7 +46,7 @@ export async function graphql<T>(query: string, variables: Record<string, unknow
 }
 
 type RawPlace = { name: string; latitude: number; longitude: number; quay?: { id: string; publicCode?: string; stopPlace: { id: string } } };
-type RawCall = { quay: { id: string; name: string; latitude: number; longitude: number; publicCode?: string; stopPlace: { id: string } }; stopPositionInPattern: number; aimedArrivalTime: string; expectedArrivalTime: string; aimedDepartureTime: string; expectedDepartureTime: string; actualDepartureTime?: string; realtime: boolean; predictionInaccurate: boolean; cancellation: boolean; forAlighting: boolean };
+export type RawCall = { quay: { id: string; name: string; latitude: number; longitude: number; publicCode?: string; stopPlace: { id: string } }; stopPositionInPattern: number; aimedArrivalTime: string; expectedArrivalTime: string; aimedDepartureTime: string; expectedDepartureTime: string; actualDepartureTime?: string; realtime: boolean; predictionInaccurate: boolean; cancellation: boolean; forAlighting: boolean };
 type RawLeg = {
   mode: string; aimedStartTime: string; expectedStartTime: string; aimedEndTime: string; expectedEndTime: string;
   realtime: boolean; duration: number; distance: number; serviceDate?: string; authority?: { id: string };
@@ -70,7 +70,7 @@ export function normalize(raw: RawLeg[], now: number): Journey {
   return { id: journeyKey(legs), legs, fetchedAt: now };
 }
 
-function normalizeCall(c: RawCall): Call {
+export function normalizeCall(c: RawCall): Call {
   return { place: { id: c.quay.stopPlace.id, quayId: c.quay.id, name: c.quay.name, latitude: c.quay.latitude, longitude: c.quay.longitude, platform: c.quay.publicCode }, position: c.stopPositionInPattern,
     aimedArrival: c.aimedArrivalTime, expectedArrival: c.expectedArrivalTime, aimedDeparture: c.aimedDepartureTime, expectedDeparture: c.expectedDepartureTime,
     actualDeparture: c.actualDepartureTime, realtime: c.realtime, inaccurate: c.predictionInaccurate, cancelled: c.cancellation, alighting: c.forAlighting };
@@ -140,7 +140,7 @@ export const EXAMPLE_TO: Place = { name: 'Lerkendal, Trondheim', latitude: 63.41
 
 /** A display label only: retain GPS coordinates and never snap routing to a stop. */
 export async function namePosition(place: Place, signal?: AbortSignal): Promise<Place> {
-  const fallback = { name: `Posisjon (${place.latitude.toFixed(5)}, ${place.longitude.toFixed(5)})`, latitude: place.latitude, longitude: place.longitude };
+  const fallback: Place = { source: 'gps', name: `Posisjon (${place.latitude.toFixed(5)}, ${place.longitude.toFixed(5)})`, latitude: place.latitude, longitude: place.longitude };
   try {
     const params = new URLSearchParams({ 'point.lat': String(place.latitude), 'point.lon': String(place.longitude), size: '1', lang: 'no' });
     const response = await enturRequest(`https://api.entur.io/geocoder/v1/reverse?${params}`, { headers: { 'ET-Client-Name': HEADERS['ET-Client-Name'] }, signal });

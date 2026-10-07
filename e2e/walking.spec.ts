@@ -1,11 +1,15 @@
+import { seedRecentPlaces } from './helpers';
 import { expect, test } from '@playwright/test';
 test('min posisjon får navn, men reisesøk beholder GPS-koordinatene', async ({ page, context }) => {
+  await seedRecentPlaces(context);
   await context.grantPermissions(['geolocation']); await context.setGeolocation({ latitude: 63.43288, longitude: 10.39374, accuracy: 10 });
   let origin: any;
   await page.route('**/geocoder/v1/reverse?**', route => route.fulfill({ json: { features: [{ properties: { label: 'Munkegata 1, Trondheim', distance: .01, id: 'NSR:StopPlace:1' } }] } }));
   await page.route('**/journey-planner/v3/graphql', route => { origin = route.request().postDataJSON().variables.from; return route.fulfill({ json: { data: { trip: { tripPatterns: [] } } } }); });
   await page.goto('/'); await page.getByRole('button', { name: '⌖  Min posisjon', exact: true }).click();
   await expect(page.getByRole('textbox', { name: 'Fra', exact: true })).toHaveValue('Ved Munkegata 1, Trondheim');
+  await page.getByRole('textbox', { name: 'Til – reisemål', exact: true }).focus();
+  await page.getByRole('button', { name: 'Testmål', exact: true }).click();
   await page.getByRole('button', { name: 'Finn reiser' }).click();
   await expect(page.getByText('Ingen reiser funnet. Prøv andre steder eller et annet tidspunkt.')).toBeVisible();
   expect(origin.coordinates).toEqual({ latitude: 63.43288, longitude: 10.39374 }); expect(origin.place).toBeUndefined();

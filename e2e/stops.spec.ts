@@ -2,8 +2,10 @@ import { expect, test } from '@playwright/test';
 test('flere stopp, opphold, gjenåpning og videre fra nytt sted', async ({ page }) => {
  await page.setViewportSize({ width: 390, height: 844 });
  await page.goto('/'); await page.getByRole('button', { name: 'Prøv demo', exact: true }).click();
+ await page.getByRole('button', { name: '+ Legg til mellomstopp', exact: true }).click();
  await page.getByRole('button', { name: 'Velg Studentersamfundet', exact: true }).click();
  await page.getByRole('button', { name: 'Legg til valgt stopp', exact: true }).click();
+ await page.getByRole('button', { name: '+ Legg til mellomstopp', exact: true }).click();
  await page.getByRole('button', { name: 'Velg Pirbadet', exact: true }).click();
  await page.getByRole('button', { name: 'Legg til valgt stopp', exact: true }).click();
  await page.getByRole('button', { name: 'Opphold', exact: true }).last().click();
@@ -27,6 +29,7 @@ test('flere stopp, opphold, gjenåpning og videre fra nytt sted', async ({ page 
  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
  await page.getByRole('button', { name: 'Reisevalg', exact: true }).click();
  await page.getByRole('button', { name: 'Endre stopp', exact: true }).click();
+ await page.getByRole('button', { name: '+ Legg til mellomstopp', exact: true }).click();
  await page.getByRole('button', { name: 'Velg Lohove', exact: true }).click();
  await page.getByRole('button', { name: 'Legg til valgt stopp', exact: true }).click();
  await page.getByRole('button', { name: 'Finn reise med disse stoppene', exact: true }).click();
@@ -34,6 +37,7 @@ test('flere stopp, opphold, gjenåpning og videre fra nytt sted', async ({ page 
  await page.getByRole('button', { name: 'Avbryt endring', exact: true }).click();
  await expect(page.getByText(/Senere · Lohove/)).toHaveCount(0);
  await page.getByRole('button', { name: 'Endre stopp', exact: true }).click();
+ await page.getByRole('button', { name: '+ Legg til mellomstopp', exact: true }).click();
  await page.getByRole('button', { name: 'Velg Lohove', exact: true }).click();
  await page.getByRole('button', { name: 'Legg til valgt stopp', exact: true }).click();
  await page.getByRole('button', { name: 'Finn reise med disse stoppene', exact: true }).click();

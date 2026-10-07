@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "Underveis · Reiseassistent", "slug": "underveis", "version": "1.0.5",
+    "name": "Underveis · Reiseassistent", "slug": "underveis", "version": "1.0.6",
     "orientation": "portrait", "userInterfaceStyle": "light",
-    "android": { "package": "no.ika.underveis", "versionCode": 6, "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"], "blockedPermissions": ["android.permission.SYSTEM_ALERT_WINDOW", "android.permission.RECORD_AUDIO"] },
+    "android": { "package": "no.ika.underveis", "versionCode": 7, "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"], "blockedPermissions": ["android.permission.SYSTEM_ALERT_WINDOW", "android.permission.RECORD_AUDIO"] },
     "plugins": ["expo-location", "expo-sqlite", "@react-native-community/datetimepicker"],
     "web": { "bundler": "metro", "name": "Underveis · Reiseassistent", "description": "En reiseplan som følger deg. Bussreiser med AtB." }
   }

@@ -1,17 +1,22 @@
+import { PendingRideScreen } from './PendingRideScreen';
+import { DepartureBoard } from '../ui/DepartureBoard';
 import { StopEditor } from '../ui/StopEditor';
 import { nextPause, remainingStops } from '../domain/stops';
 import { vehicleName } from '../domain/transport';
 import React, { useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import { SCENARIOS, DEMO_WRONG_STOP } from '../demo/provider';
 import { arrival, transfers } from '../domain/journey';
 import { onboardTiming, stepIndex, stepsFor } from '../domain/progress';
-import { Place, PlannedStop } from '../domain/types';
+import { Place, PlannedStop, Departure } from '../domain/types';
 import { AlertCard, Button, clock, JourneyCard, PlaceField, Preferences, Timeline, TransportIcon } from '../ui/components';
 import { colors, s } from '../ui/theme';
 import { Travel } from './PlanningScreen';
 
-export function ActiveScreen({ travel, onBack }: { travel: Travel; onBack: () => void }) {
+export function ActiveScreen({ travel, onBack, onDepartures }: { travel: Travel; onBack: () => void; onDepartures: (onboard: boolean, d?: Departure, place?: Place) => void }) {
+  const [showSteps,setShowSteps] = useState(false), [showTimes,setShowTimes] = useState(false);
+  const [scrollY,setScrollY] = useState(0), [boardBox,setBoardBox] = useState({y:0,height:1});
+  const height = useWindowDimensions().height;
   const active = travel.active!;
   const [editingStops, setEditingStops] = useState(false);
   const [draftStops, setDraftStops] = useState<PlannedStop[]>([]);
@@ -30,7 +35,8 @@ export function ActiveScreen({ travel, onBack }: { travel: Travel; onBack: () =>
   const broken = !uncertain && (active.journey.legs.slice(p.legIndex).some(l => l.cancelled && l.quality !== 'stale') || transfers(active.journey, travel.now, p.legIndex).some(t => t.status === 'missed'));
   const timing = onboardTiming(active, uncertain ? Number.MAX_SAFE_INTEGER : travel.now);
   const choices = Array.from(new Map([...(leg?.calls?.filter(c => c.alighting).map(c => c.place) ?? []), ...(leg ? [leg.to] : [])].map(place => [place.quayId ?? place.id ?? place.name, place])).values());
-  return <ScrollView contentContainerStyle={{ padding: 20, width: '100%', maxWidth: 900, alignSelf: 'center', gap: 18 }} keyboardShouldPersistTaps="handled">
+  if (active.pendingRide) return <PendingRideScreen travel={travel} onBack={onBack} onDepartures={() => onDepartures(true)} />;
+  return <ScrollView onScroll={e=>setScrollY(e.nativeEvent.contentOffset.y)} scrollEventThrottle={100} contentContainerStyle={{ padding: 20, width: '100%', maxWidth: 900, alignSelf: 'center', gap: 18 }} keyboardShouldPersistTaps="handled">
     <View style={[s.row, { justifyContent: 'space-between', flexWrap: 'wrap' }]}><Button small secondary label="← Planlegg reise" onPress={onBack} /><Button small secondary label="Reisevalg" onPress={() => setOptions(!options)} /></View>
     <Text accessibilityRole="header" style={s.title}>Reisen din</Text>
     <Button small secondary label="Avslutt og start på nytt" onPress={() => { travel.stop(); onBack(); }} />
@@ -68,6 +74,11 @@ export function ActiveScreen({ travel, onBack }: { travel: Travel; onBack: () =>
       <View style={[s.row, { flexWrap: 'wrap' }]}><Button small secondary label={recovery ? 'Prøv igjen' : 'Oppdater nå'} disabled={travel.busy} onPress={() => void travel.refresh()} />{recovery && <Button small secondary label="Endre startsted" onPress={travel.editAlightingPlace} />}</View>
       {!travel.demo && !options && <Text style={s.muted}>{travel.paused ? 'GPS pauset' : travel.gpsEnabled ? travel.gpsStatus : 'Automatisk påstigning er slått av'}</Text>}
     </View>}
+    {!stay && !recovery && p.step === 'waiting' && nextBus && <View onLayout={e=>setBoardBox(e.nativeEvent.layout)}>
+      <Button small secondary label="Endre holdeplass" onPress={()=>onDepartures(false,undefined,nextBus.from)} />
+      <DepartureBoard place={nextBus.from} demo={travel.demo} visible={scrollY<boardBox.y+boardBox.height && scrollY+height>boardBox.y} selectedId={`${nextBus.serviceJourneyId}@${nextBus.serviceDate}`} onSelect={(d,onboard)=>onDepartures(onboard,d,nextBus.from)} />
+    </View>}
+    <Button secondary label="Jeg er på en annen avgang" onPress={()=>onDepartures(true)} />
     {(active.stops ?? []).length > 0 && <View style={[s.card, { gap: 12 }]}><Text style={s.title}>Planlagte stopp</Text>{(active.stops ?? []).map(stop => <View key={stop.id} style={{ gap: 8 }}><Text style={s.text}>{stop.visited ? '✓ Besøkt' : 'Senere'} · {stop.place.name} · {stop.mode === 'pause' ? 'Opphold' : 'Direkte videre'}</Text>{!stay && !editingStops && pending[0]?.id === stop.id && <Button small secondary label={stop.mode === 'pause' ? `Jeg er ved ${stop.place.name} – start opphold` : `Bekreft passert ${stop.place.name}`} onPress={() => travel.confirmPlannedStop(stop.id)} />}</View>)}</View>}
     {!stay && p.phase !== 'onboard' && (p.step !== 'arrived' || recovery) && !active.walkingOnly && <Button secondary label={travel.walkingBusy ? 'Beregner gangrute …' : 'Jeg vil gå resten'} disabled={travel.walkingBusy} onPress={() => void travel.requestWalking()} />}
     {!stay && active.walkingOnly && <Text style={s.muted}>Du går resten. Ankomsten er beregnet fra siste kjente posisjon. Med fersk GPS oppdateres gangruten hvert minutt.</Text>}
@@ -85,8 +96,10 @@ export function ActiveScreen({ travel, onBack }: { travel: Travel; onBack: () =>
     {travel.alerts.map(a => <AlertCard key={a.id} alert={a} />)}
     {recovery && travel.recovery.map((j, i) => <View key={j.id || i} testID="recovery-option" style={[s.card, { gap: 14 }]}><Text style={s.title}>Videre fra {p.place?.name}</Text><JourneyCard journey={j} now={travel.now} compact /><Button label="Velg denne videre reisen" onPress={() => travel.acceptRecovery(j)} /></View>)}
     {!stay && !editingStops && !recovery && travel.recommendation && <View testID="recommendation" style={[s.card, { gap: 14, borderColor: colors.green }]}><Text style={s.title}>{travel.recommendation.reason}</Text><JourneyCard journey={travel.recommendation.journey} now={travel.now} compact /><Button label="Bytt til denne reisen →" onPress={travel.acceptAlternative} /></View>}
-    {!stay && !recovery && <View style={[s.card, { gap: 14 }]}><Text style={s.title}>Steg for steg</Text>{steps.map((item, i) => <View key={`${item.kind}:${item.legIndex}`} style={{ padding: 14, borderRadius: 12, gap: 5, backgroundColor: i === index ? colors.soft : colors.white, borderWidth: i === index ? 2 : 1, borderColor: i === index ? colors.green : colors.border, opacity: i < index ? .65 : 1 }}><Text style={[s.label, { color: colors.green }]}>{i < index ? '✓ Fullført' : i === index ? 'Nå' : 'Senere'} · Steg {i + 1}</Text><View style={s.row}>{active.journey.legs[item.legIndex] && <TransportIcon mode={active.journey.legs[item.legIndex].mode} />}<Text style={[s.text, { flexShrink: 1 }]}>{item.label}</Text></View>{item.at && <Text style={s.muted}>{clock(item.at)}</Text>}</View>)}</View>}
-    {!stay && !recovery && <View style={[s.card, { gap: 14 }]}><Text style={s.title}>Tider og overganger</Text><Timeline journey={active.journey} now={uncertain ? Number.MAX_SAFE_INTEGER : travel.now} currentIndex={p.legIndex} /></View>}
+    {!stay && !recovery && <Button secondary label={showSteps ? "Skjul steg for steg" : "Vis steg for steg"} onPress={()=>setShowSteps(!showSteps)} />}
+    {!stay && !recovery && showSteps && <View style={[s.card, { gap: 14 }]}><Text style={s.title}>Steg for steg</Text>{steps.map((item, i) => <View key={`${item.kind}:${item.legIndex}`} style={{ padding: 14, borderRadius: 12, gap: 5, backgroundColor: i === index ? colors.soft : colors.white, borderWidth: i === index ? 2 : 1, borderColor: i === index ? colors.green : colors.border, opacity: i < index ? .65 : 1 }}><Text style={[s.label, { color: colors.green }]}>{i < index ? '✓ Fullført' : i === index ? 'Nå' : 'Senere'} · Steg {i + 1}</Text><View style={s.row}>{active.journey.legs[item.legIndex] && <TransportIcon mode={active.journey.legs[item.legIndex].mode} />}<Text style={[s.text, { flexShrink: 1 }]}>{item.label}</Text></View>{item.at && <Text style={s.muted}>{clock(item.at)}</Text>}</View>)}</View>}
+    {!stay && !recovery && <Button secondary label={showTimes ? "Skjul tider og overganger" : "Vis tider og overganger"} onPress={()=>setShowTimes(!showTimes)} />}
+    {!stay && !recovery && showTimes && <View style={[s.card, { gap: 14 }]}><Text style={s.title}>Tider og overganger</Text><Timeline journey={active.journey} now={uncertain ? Number.MAX_SAFE_INTEGER : travel.now} currentIndex={p.legIndex} /></View>}
     {travel.demo && <View style={[s.card, { gap: 12 }]}><Text style={s.title}>Demo · simulerte hendelser</Text><View style={[s.row, { flexWrap: 'wrap' }]}>{SCENARIOS.map(scenario => <Button small key={scenario.id} secondary={travel.scenario !== scenario.id} label={scenario.label} onPress={() => travel.changeScenario(scenario.id)} />)}</View><Text style={s.muted}>Prøv «Jeg har gått av» og velg et annet stopp for å teste ny videre reise.</Text></View>}
   </ScrollView>;
 }
