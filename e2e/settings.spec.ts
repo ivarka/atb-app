@@ -1,0 +1,28 @@
+import { expect,test } from '@playwright/test';
+import { closeDetails,boardPlanned,scenario } from './helpers';
+test('innstillinger bevarer uferdig søk, lagres og endrer bare tavlens utseende',async({page})=>{
+ await page.route('**/geocoder/**',route=>route.fulfill({json:{features:[]}}));
+ await page.setViewportSize({width:390,height:844});await page.goto('/');
+ await page.getByRole('textbox',{name:'Fra',exact:true}).fill('Uferdig');
+ await page.getByRole('button',{name:'Innstillinger',exact:true}).click();
+ await page.getByRole('button',{name:'Mørk',exact:true}).click();await page.getByRole('button',{name:'Av',exact:true}).click();
+ await closeDetails(page);await expect(page.getByRole('textbox',{name:'Fra',exact:true})).toHaveValue('Uferdig');
+ await page.reload();await page.getByRole('button',{name:'Innstillinger',exact:true}).click();
+ await expect(page.getByText('Automatisk påstigning er slått av',{exact:true})).toBeVisible();
+ await expect(page.getByTestId('board-preview')).toHaveCSS('background-color','rgb(21, 39, 35)');
+ await closeDetails(page);await page.getByRole('button',{name:'Prøv demo',exact:true}).click();
+ await page.getByRole('button',{name:'Finn reiser'}).click();await page.getByRole('button',{name:'Velg',exact:true}).first().click();
+ await page.getByRole('button',{name:'Jeg er på holdeplassen',exact:true}).click();
+ await expect(page.getByTestId('departure-board')).toHaveCSS('background-color','rgb(21, 39, 35)');
+ await expect(page.getByRole('button',{name:'Se hele reisen →',exact:true})).toBeInViewport();
+ await page.screenshot({path:'test-results/dark-board.png',fullPage:true});
+ const id=await page.evaluate(()=>JSON.parse(localStorage.getItem('underveis.v1')!).active.journey.id);
+ await page.getByRole('button',{name:'Innstillinger',exact:true}).click();await page.getByRole('button',{name:'Lys',exact:true}).click();await page.getByRole('button',{name:'Tryggest',exact:true}).click();await closeDetails(page);
+ expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('underveis.v1')!).active.journey.id)).toBe(id);
+ await expect(page.getByTestId('departure-board')).toHaveCSS('background-color','rgb(246, 247, 243)');
+ await boardPlanned(page);await expect(page.getByTestId('journey-strip')).toContainText('Om bord');
+ await page.getByTestId('journey-strip').click();await expect(page.getByRole('heading',{name:'Hele reisen',exact:true})).toBeVisible();await closeDetails(page);
+ await page.screenshot({path:'test-results/journey-strip.png',fullPage:true});
+ await scenario(page,'Mistet overgang');await page.getByRole('button',{name:'Innstillinger',exact:true}).click();
+ await expect(page.getByTestId('detail-sheet').getByRole('alert')).toContainText('Du ser ikke ut til å rekke overgangen');
+});

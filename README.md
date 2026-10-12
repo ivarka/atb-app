@@ -2,7 +2,7 @@
 
 En uavhengig reiseassistent for buss, båt, trikk og tog i Trøndelag. Appen planlegger reisen, følger oppdaterte tider og foreslår alternativer når reisen endrer seg. Bygget med React Native, Expo, React Native Web og TypeScript, for nettleser og Android.
 
-**Gjeldende appversjon: 1.0.6 · Android-versjonskode: 7.** Versjonen styres av `app.json`; `package.json` har separat pakkeversjon.
+**Siste bygde APK: 1.0.6 · Android-versjonskode: 7.** Den kompakte reisevisningen beskrevet nedenfor er foreløpig tilgjengelig i kildekoden og nettleseren, ikke i denne APK-en. Versjonen styres av `app.json`; `package.json` har separat pakkeversjon.
 
 Ingen innlogging, API-nøkkel eller egen server kreves. Appen bruker Entur direkte. Overvåking fungerer mens appen er åpen og aktiv; bakgrunnsovervåking og pushvarsler er ikke implementert.
 
@@ -28,21 +28,35 @@ Dette eksporterer nettsiden til `dist/`, uten å publisere den. Posisjon i nettl
 
 ## Slik brukes appen
 
-1. Start med tomme **Fra**- og **Til – reisemål**-felt. Et tomt felt viser sist brukte steder; skriving filtrerer historikken og henter separate søkeforslag. Velg tidspunkt og prioritering under **Reisevalg**: **Balansert**, **Raskest** eller **Tryggest**. «Min posisjon» viser et stedsnavn når navneoppslaget lykkes, men beholder de faktiske GPS-koordinatene.
+1. Start med tomme **Fra**- og **Til – reisemål**-felt. Et tomt felt viser sist brukte steder; skriving filtrerer historikken og henter separate søkeforslag. Velg tidspunkt under **Avreise**, og prioritering under **Innstillinger**: **Balansert**, **Raskest** eller **Tryggest**. «Min posisjon» viser et stedsnavn når navneoppslaget lykkes, men beholder de faktiske GPS-koordinatene.
 2. Trykk **+ Legg til mellomstopp** under reisemålet. Trykk på et valgt stopp for å endre opphold, flytte eller fjerne det.
-3. Søk og velg **Følg reisen**. En egen reiseside viser gjeldende steg, neste handling, tider og varsler.
+3. Søk og velg **Velg**. En egen reiseside viser gjeldende steg, neste handling, tider og varsler.
 4. Bekreft fremdrift med «Jeg er på holdeplassen», «Jeg er om bord», «Jeg har gått av» og «Jeg er fremme». Klokken alene flytter aldri brukeren videre.
 5. Godta et alternativ for å bytte reise. Tilbake til planlegging bevarer reisen; **Avslutt og start på nytt** fjerner aktiv reise og gamle søkeresultater, men beholder prioriteringen og stedshistorikken.
 
+### Innstillinger og grafisk fremdrift
+
+Tannhjulet **Innstillinger** er tilgjengelig ved planlegging og på aktiv reise. Her velges lys/mørk avgangstavle, reiseprioritering og automatisk påstigning. Tavletema og GPS-valg lagres under `underveis.settings.v1`; eldre installasjoner får lys tavle og GPS på. Prioritering bruker fortsatt eksisterende lagring. Innstillinger kan lukkes med tilbakeknappen eller Escape uten å miste uferdige søkefelt eller aktiv reise. Temabytte endrer bare tavlen og utløser ingen egne API-kall.
+
+Over **Se hele reisen →** vises en horisontal reiselinje med transportikoner, linjenummer, fullførte etapper og «Nå». Lange reiser samles i høyst fem punkter, uten sidelengs scrolling. Maksimalt to tider vises, med usikkerhet når sanntid mangler. Linjen viser bekreftet fremdrift, ikke GPS-posisjon eller prosentvis kjørt distanse. Trykk på den for den vertikale reisebeskrivelsen. Opphold og manglende videreplan vises uten å gi gamle fremtidige tider gyldighet.
+
+### Kompakt visning underveis
+
+Reisesiden viser gjeldende steg, én hovedhandling og en kort ankomstlinje. **Se hele reisen →** åpner reisebeskrivelse, gjeldende og kommende steg, planlagte stopp, tider og overganger. Fullførte steg åpnes separat. Detaljer følger oppdaterte reisedata; tilbakeknappen eller Escape lukker visningen uten å avslutte reisen. Etter gjenåpning starter appen på den kompakte siden.
+
+**Endre reisen** samler «Gå resten», «Jeg er på en annen avgang», endring av stopp, manuell oppdatering og «Avslutt og start på nytt». Demoens kontroller ligger under **Endre reisen → Demo · simuler hendelse**. Påstigning, avstigning, ankomst og neste obligatoriske stopp bekreftes fortsatt eksplisitt.
+
+Det viktigste varselet vises rett under hovedhandlingen. Ved flere varsler åpner **Se alle varsler** listen. Overgangsrisiko prioriteres foran vanlig forsinkelse; usikre tider merkes også ved tidspunktet. Et forslag viser først begrunnelse og **Se alternativ**, og tas i bruk først etter godkjenning i detaljvisningen. Valg av avstigningssted, neste stopp og videreplan har egne visninger.
+
 ### Avganger og uplanlagt påstigning
 
-**Avganger** åpner avgangstavlen. Søk etter holdeplass, eller bruk **Finn holdeplasser nær meg** og velg selv. Tavlen vises også under ventesteget på aktiv reise. Den viser ti avganger innen én time med retning, plattform/kai, tider og datakvalitet. Innstilte avganger kan ikke velges. Tavlen oppdateres høyst hvert 30. sekund mens den er synlig og appen er aktiv. Samme holdeplassoppslag deles i appen; feil gjør gamle data usikre.
+**Avganger** åpner avgangstavlen. Søk etter holdeplass, eller bruk **Finn holdeplasser nær meg** og velg selv. Tavlen vises også under ventesteget på aktiv reise. Den kompakte tavlen viser inntil fem avganger de neste fem minuttene med ikon, linje, retning og ventetid på én rad. Hvis ingen går så snart, vises neste avgang innen én time. **Se flere avganger →** åpner full tavle med ti rader om gangen. Trykk på en rad for plattform/kai, planlagt og forventet tid, forsinkelse, datakvalitet og handlinger. Innstilling og usikker tid merkes også på raden. Innstilte avganger kan ikke velges. Tavlen oppdateres høyst hvert 30. sekund mens den er synlig og appen er aktiv. Samme holdeplassoppslag deles i appen; feil gjør gamle data usikre.
 
 **Planlegg med denne** beregner en reise med valgt avgang, uten å registrere påstigning. **Jeg er allerede om bord** / **Jeg er på en annen avgang** lar deg velge en konkret avgang ved påstigningsstedet, også fra siste 30 minutter. Tidsrommet kan utvides til tre timer. Bruk retning og tidspunkt, ikke bare linjenummer, for å identifisere avgangen.
 
 Når påstigning bekreftes, lagres transporten straks. Reisemål og gjenstående stopp beholdes selv om videreberegningen feiler. Ukjent fremdrift krever at du velger neste stopp. Appen undersøker opptil tre kommende avstigningssteder, beholder transporten frem dit og viser videreforslag. **Følg denne videreplanen** godkjenner ruten. Ved feil kan du prøve igjen, korrigere avgangen eller bekrefte avstigning. Gjenåpning bevarer bekreftet transport før videreplan er valgt.
 
-Full tidslinje og detaljer åpnes ved behov på reisesiden. Lokal stedshistorikk inneholder inntil ti unike valgte steder fra innsendte søk. Enkeltsteder og hele listen kan slettes fra nedtrekkslisten. Fritekst, demosteder og GPS-koordinater lagres ikke i denne historikken. Ingen synkronisering mellom enheter.
+Full tidslinje og detaljer åpnes med **Se hele reisen →**. Lokal stedshistorikk inneholder inntil ti unike valgte steder fra innsendte søk. Enkeltsteder og hele listen kan slettes fra nedtrekkslisten. Fritekst, demosteder og GPS-koordinater lagres ikke i denne historikken. Ingen synkronisering mellom enheter.
 
 ### Planlagte stopp og opphold
 
@@ -53,7 +67,7 @@ Hvert stopp har ett av to valg:
 
 Ved videreføring brukes posisjon yngre enn 30 sekunder med nøyaktighet innen 50 meter, eller et startsted du selv velger. Har du gått videre fra butikken, skal den nye posisjonen brukes. Uten brukbar GPS tilbys det gamle stoppet som et valg, aldri som en antatt faktisk posisjon. Ved feil beholdes opphold og valgt startsted.
 
-Under **Reisevalg → Endre stopp** kan gjenstående stopp legges til, flyttes og fjernes. Endringene tas i bruk sammen med et godkjent ruteforslag. Omplanlegging og gangforslag beholder gjenstående stopp. Under opphold pauses GPS-sporing og automatiske avgangs- og alternativsøk; posisjon kan hentes når du vil fortsette.
+Under **Endre reisen → Endre stopp** kan gjenstående stopp legges til, flyttes og fjernes. Endringene tas i bruk sammen med et godkjent ruteforslag. Omplanlegging og gangforslag beholder gjenstående stopp. Under opphold pauses GPS-sporing og automatiske avgangs- og alternativsøk; posisjon kan hentes når du vil fortsette.
 
 ### Avstigning og gange
 
@@ -88,11 +102,11 @@ Ved `429` respekteres `Retry-After` og `Rate-Limit-Expiry-Time`; uten lesbare he
 
 ## Demo og tester
 
-Demo bruker fiktive reiser og tider, uten ekte API-kall. Test forsinkelse, knapp/tapt overgang, innstilling, manglende sanntid, nettverksfeil, innhentet forsinkelse og kombinerte transportmidler. Gjenåpning av demo tilbakestiller hendelsesscenarioet til «I rute».
+Demo bruker fiktive reiser og tider, uten ekte API-kall. Åpne **Endre reisen → Demo · simuler hendelse** på aktiv reise. Test forsinkelse, knapp/tapt overgang, innstilling, manglende sanntid, nettverksfeil, innhentet forsinkelse og kombinerte transportmidler. Gjenåpning av demo tilbakestiller hendelsesscenarioet til «I rute».
 
 For avgangstavle: velg demo og **Avganger**. To avganger har samme linjenummer og forskjellig retning; en båtavgang er innstilt. Prøv **Jeg er allerede om bord**, bekreft avgangen, velg neste stopp og godta en videreplan.
 
-For stopp: legg til et demosted, velg Opphold, følg reisen og bekreft besøket. «Jeg har gått til Studentersamfundet» tester videreføring fra et annet sted. Reisevalg lar deg teste endring og avbrytelse av stopplisten.
+For stopp: legg til et demosted, velg Opphold, følg reisen og bekreft besøket. «Jeg har gått til Studentersamfundet» tester videreføring fra et annet sted. Endre reisen lar deg teste endring og avbrytelse av stopplisten.
 
 ```sh
 npm run typecheck

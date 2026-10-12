@@ -1,6 +1,6 @@
 # Underveis – status og videre plan
 
-Dokumentasjon oppdatert **7. oktober 2026**. Gjeldende implementasjon er **1.0.6**, Android-versjonskode **7**, fra `app.json`.
+Dokumentasjon oppdatert **12. oktober 2026**. Siste bygde APK er **1.0.6**, Android-versjonskode **7**, fra `app.json`. Ny kompakt reisevisning er implementert i kildekoden; ny APK er ikke bygget som del av denne UI-endringen.
 
 Dette dokumentet skiller levert funksjonalitet fra videre arbeid. Punkter nedenfor om fremtidige funksjoner er ikke en instruks om å implementere eller publisere dem uten en ny oppgave.
 
@@ -22,6 +22,25 @@ En reiseassistent for Trøndelag som følger en valgt reise, vurderer overganger
 - [x] Videreføring etter opphold fra fersk posisjon eller manuelt valgt sted; gamle tider etter opphold brukes ikke som en ferdig videreplan.
 - [x] Redigering av gjenstående stopp underveis, med ny plan først etter godkjent forslag. Stopp beholdes ved omplanlegging og gange.
 - [x] Demo og regresjonstester for stopprekkefølge, opphold, feil, ny startposisjon og at opphold ikke gir automatisk API-trafikk.
+
+## Innstillinger, tavletema og reiselinje – 12. oktober 2026
+
+- [x] «Velg» på reiseforslag; egne Innstillinger for tavletema, prioritering og automatisk påstigning.
+- [x] Reisehandlinger under «Endre reisen», tidspunkt under «Avreise». Søkefelt og aktiv reise beholdes når innstillinger lukkes.
+- [x] Lys/mørk holdeplassinspirert tavle med faste kolonner, tilgjengelig valgmarkering og lagret tema/GPS-valg.
+- [x] Horisontal fremdrift med høyst fem punkter og to tider; ingen klokkestyrt fremdrift eller gamle tider ved manglende videreplan.
+
+Ingen ny APK eller publisering inngår. Verifisert 12. oktober: typekontroll, 102 enhetstester og 28 nettlesertester passerte; én valgfri ekte API-test ble hoppet over. Kontrollen omfatter lagrede innstillinger, uferdige søkefelt, lys/mørk tavle på mobilbredde, grafisk fremdrift, kritiske varsler i Innstillinger og temabytte uten ekstra API-kall.
+
+## Kompakt reisevisning – 12. oktober 2026
+
+- [x] Ett hovedkort med gjeldende handling og ankomst, synlig «Se hele reisen», og ekstra handlinger under Reisevalg.
+- [x] Egen detaljvisning for tidslinje, stopp og tider; fullførte steg er lukket som standard.
+- [x] Korte avgangsrader for neste fem minutter, høyst fem rader, med neste avgang som reserve. Full tavle og avgangsdetaljer åpnes ved behov.
+- [x] Prioritert kort varsel, egen alternativvisning og fokuserte valg for avstigning, opphold og videreplan.
+- [x] Felles modal med tilbakeknapp, Escape og fokusretur. Lagret reise og API-intervaller er bevart.
+
+Verifisert 12. oktober: typekontroll, 95 enhetstester og hele nettlesersuiten med 27 beståtte tester. Den valgfrie ekte API-nettlesertesten ble hoppet over. Mobilbredde 390 og 320 piksler, forstørret tekst, tastatur/Escape/fokusretur, gjenåpning, kritiske varsler i detaljer, delt avgangsoppslag og deaktivering av foreldede avganger ved feil er kontrollert. Androids fysiske tilbakeknapp og stor systemskrift bør også feltprøves ved neste APK-utgivelse. API-integrasjonen er uendret; ekte API-tester gjentas ikke for denne presentasjonsendringen.
 
 ## Nytt i 1.0.6
 

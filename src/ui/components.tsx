@@ -7,9 +7,9 @@ import { arrival, transitLegs, departure, isFresh, minutes, time, transfers } fr
 import { Journey, Place, Preference, TravelAlert, TransportMode } from '../domain/types';
 import { colors, s } from './theme';
 
-export function Button({ label, onPress, secondary, disabled, small, testID, accessibilityLabel }: { accessibilityLabel?: string; label: string; onPress: () => void; secondary?: boolean; disabled?: boolean; small?: boolean; testID?: string }) {
+export function Button({ label, onPress, secondary, disabled, small, testID, accessibilityLabel, selected }: { selected?: boolean; accessibilityLabel?: string; label: string; onPress: () => void; secondary?: boolean; disabled?: boolean; small?: boolean; testID?: string }) {
   const [focused, setFocused] = useState(false);
-  return <Pressable onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} testID={testID} accessibilityRole="button" accessibilityLabel={accessibilityLabel ?? label} disabled={disabled} onPress={onPress} style={({ pressed }) => [styles.button, { minHeight: 44, justifyContent: "center" }, focused && { outlineWidth: 3, outlineColor: colors.green, outlineOffset: 2 }, secondary && styles.secondary, small && { paddingVertical: 9, paddingHorizontal: 14 }, { opacity: disabled ? 0.45 : pressed ? 0.75 : 1 }]}>
+  return <Pressable onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} testID={testID} accessibilityRole="button" accessibilityLabel={accessibilityLabel ?? label} accessibilityState={{selected,disabled}} disabled={disabled} onPress={onPress} style={({ pressed }) => [styles.button, { minHeight: 44, justifyContent: "center" }, focused && { outlineWidth: 3, outlineColor: colors.green, outlineOffset: 2 }, secondary && styles.secondary, small && { paddingVertical: 9, paddingHorizontal: 14 }, { opacity: disabled ? 0.45 : pressed ? 0.75 : 1 }]}>
     <Text style={{ color: secondary ? colors.ink : colors.white, fontSize: small ? 13 : 15, fontWeight: '600' }}>{label}</Text>
   </Pressable>;
 }
@@ -95,7 +95,7 @@ export function JourneyCard({ journey, now, index, onFollow, compact = false }: 
     </View>
     <View style={[s.row, { justifyContent: 'space-between', flexWrap: 'wrap' }]}>
       <Text style={[s.muted, { color: realtime ? colors.green : colors.muted }]}>{!buses.length ? 'Beregnet gangtid' : realtime ? '● Sanntid' : '◷ Rutetid / delvis sanntid'}{index === 0 ? '  ·  Første forslag' : ''}</Text>
-      <View style={s.row}><Button small secondary label={expanded ? 'Skjul detaljer' : 'Se detaljer'} onPress={() => setExpanded(!expanded)} />{onFollow && <Button small label="Følg reisen →" onPress={onFollow} />}</View>
+      <View style={s.row}><Button small secondary label={expanded ? 'Skjul detaljer' : 'Se detaljer'} onPress={() => setExpanded(!expanded)} />{onFollow && <Button small label="Velg" onPress={onFollow} />}</View>
     </View>
     {expanded && <View style={{ marginTop: 24 }}><Timeline journey={journey} now={now} /></View>}
   </View>;

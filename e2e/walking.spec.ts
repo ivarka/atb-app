@@ -1,3 +1,4 @@
+import { closeDetails, openOptions, scenario, boardPlanned } from './helpers';
 import { seedRecentPlaces } from './helpers';
 import { expect, test } from '@playwright/test';
 test('min posisjon får navn, men reisesøk beholder GPS-koordinatene', async ({ page, context }) => {
@@ -17,24 +18,26 @@ test('min posisjon får navn, men reisesøk beholder GPS-koordinatene', async ({
 test('velge å gå resten, gjenåpne, avslutte og starte ny reise', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/'); await page.getByRole('button', { name: 'Prøv demo', exact: true }).click();
-  await page.getByRole('button', { name: 'Finn reiser' }).click(); await page.getByRole('button', { name: 'Følg reisen' }).first().click();
+  await page.getByRole('button', { name: 'Finn reiser' }).click(); await page.getByRole('button', { name: 'Velg', exact: true }).first().click();
+  await openOptions(page);
   await page.getByRole('button', { name: 'Jeg vil gå resten', exact: true }).click();
   await expect(page.getByTestId('walking-choice')).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: 'test-results/gange-mobil.png', fullPage: true });
-  await expect(page.getByRole('button', { name: 'Jeg er om bord', exact: true })).toBeVisible();
+  expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('underveis.v1')!).active.walkingOnly)).not.toBe(true);
   await page.getByRole('button', { name: 'Jeg går denne veien', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Jeg er om bord', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Jeg er fremme', exact: true })).toBeVisible();
   await page.reload();
-  await expect(page.getByText(/Du går resten\./)).toBeVisible();
+  await expect(page.getByRole('button',{name:'Jeg er fremme',exact:true})).toBeVisible();
+  await openOptions(page);
   await page.getByRole('button', { name: 'Avslutt og start på nytt', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Finn reiser' })).toBeEnabled();
   await expect(page.getByText('Dine reiseforslag', { exact: true })).toHaveCount(0);
   await page.reload(); await expect(page.getByRole('button', { name: 'Til aktiv reise', exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: 'Prøv demo', exact: true }).click();
-  await page.getByRole('button', { name: 'Finn reiser' }).click(); await page.getByRole('button', { name: 'Følg reisen' }).first().click();
-  await expect(page.getByText('Reisen din', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Finn reiser' }).click(); await page.getByRole('button', { name: 'Velg', exact: true }).first().click();
+  await expect(page.getByRole('button', { name: 'Se hele reisen →', exact: true })).toBeVisible();
   await page.getByRole('button', { name: '← Planlegg reise', exact: true }).click();
   await page.getByRole('button', { name: 'Avslutt og start på nytt', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Finn reiser' })).toBeEnabled();

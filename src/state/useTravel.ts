@@ -1,3 +1,4 @@
+import { loadSettings, saveSettings } from '../platform/settings';
 import { departureCalls } from '../api/departures';
 import { demoDepartureCalls } from '../demo/departures';
 import { confirmedRide, departureLeg, routesWithDeparture, upcomingPosition } from '../domain/departures';
@@ -34,7 +35,7 @@ export function useTravel() {
   const [now, setNow] = useState(Date.now());
   const [position, setPosition] = useState<Position>();
   const positionRef = useRef<Position | undefined>(undefined);
-  const [gpsEnabled, setGpsEnabled] = useState(true);
+  const [gpsEnabled, setGpsEnabled] = useState(() => loadSettings().gpsEnabled);
   const [gpsStatus, setGpsStatus] = useState('Venter på posisjon …');
   const [boarding, setBoarding] = useState<BoardingEvidence | null>(null);
   const [boardingUndo, setBoardingUndo] = useState<Progress | null>(null);
@@ -512,7 +513,7 @@ export function useTravel() {
     editAlightingPlace: () => { setChoosingAlight(true); setAlighting(null); }, cancelAlighting: () => setChoosingAlight(false),
     recovery: ready && !paused ? recovery.filter(j => now - j.fetchedAt < 90000) : [], acceptRecovery,
     gpsEnabled, gpsStatus, boarding, boardingUndo, dismissBoarding, undoBoarding,
-    toggleGps: () => { setGpsEnabled(v => !v); setBoarding(null); setAlighting(null); },
+    toggleGps: () => { setGpsEnabled(v => {saveSettings({gpsEnabled:!v});return !v;}); setBoarding(null); setAlighting(null); },
     alerts: active && ready && !paused && !choosingAlight && !locatingAlight ? alertsFor(active, now) : [],
     invalidateSearch: () => { searchId.current++; setResults([]); setSearching(false); },
     search, follow, confirmBoard, confirmAlight, acceptAlternative, setPosition: (p: Position) => { positionRef.current = p; setPosition(p); },

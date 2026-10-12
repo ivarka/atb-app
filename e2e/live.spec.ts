@@ -1,3 +1,4 @@
+import { closeDetails, openOptions, scenario, boardPlanned } from './helpers';
 import { expect, test } from '@playwright/test';
 
 test('ekte Entur-data kan hentes direkte fra nettleseren', async ({ page }) => {
@@ -12,9 +13,9 @@ test('ekte Entur-data kan hentes direkte fra nettleseren', async ({ page }) => {
   await page.getByRole('button', { name: 'Lerkendal, Trondheim', exact: true }).first().click();
   await page.getByRole('button', { name: 'Finn reiser' }).click();
   await expect(page.getByText('Dine reiseforslag')).toBeVisible({ timeout: 30000 });
-  await page.getByRole('button', { name: 'Følg reisen' }).first().click();
+  await page.getByRole('button', { name: 'Velg', exact: true }).first().click();
   await expect(page.getByText('● Følger reisen', { exact: true })).toBeVisible({ timeout: 30000 });
-  await expect(page.getByText('Reisen din', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Se hele reisen →', exact: true })).toBeVisible();
   await page.screenshot({ path: 'test-results/underveis-live.png', fullPage: true });
   expect(errors).toEqual([]);
 });

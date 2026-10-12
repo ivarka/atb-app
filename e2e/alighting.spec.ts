@@ -1,3 +1,4 @@
+import { openOptions, closeDetails } from './helpers';
 import { expect, test } from '@playwright/test';
 import { boardingFixture } from '../tests/fixtures/boarding';
 test('GPS-avstigning krever bekreftelse og søker fra faktisk koordinat', async ({ page }) => {
@@ -34,7 +35,9 @@ test('GPS-avstigning krever bekreftelse og søker fra faktisk koordinat', async 
   }, active);
   await page.clock.install({ time: samples[0].timestamp });
   await page.goto('/');
+  await openOptions(page);
   await expect(page.getByRole('button', { name: 'Oppdater nå', exact: true })).toBeEnabled();
+  await closeDetails(page);
   const before = requests;
   for (const p of samples) {
     await page.clock.setFixedTime(p.timestamp);
@@ -49,6 +52,7 @@ test('GPS-avstigning krever bekreftelse og søker fra faktisk koordinat', async 
   await page.clock.setFixedTime(now + 1);
   await page.getByRole('button', { name: 'Jeg har gått av', exact: true }).click();
   await expect(page.getByText('Må oppdateres fra der du er', { exact: true })).toBeVisible();
+  await page.getByRole('button',{name:'Se videreforslag',exact:true}).click();
   await expect(page.getByTestId('recovery-option')).toHaveCount(1);
   expect(origins.at(-1)).toMatchObject({ coordinates: { latitude: samples[3].place.latitude, longitude: samples[3].place.longitude } });
   expect(origins.at(-1).place).toBeUndefined();

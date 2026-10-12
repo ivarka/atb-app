@@ -1,3 +1,4 @@
+import { SettingsButton } from '../ui/Settings';
 import { StopEditor } from '../ui/StopEditor';
 import React, { useState, useEffect, useRef } from 'react';
 import { ActivityIndicator, ScrollView, Text, View, useWindowDimensions } from 'react-native';
@@ -7,7 +8,7 @@ import { iso } from '../domain/journey';
 import { Place, SearchRequest, PlannedStop } from '../domain/types';
 import { locate } from '../platform/location';
 import { useTravel } from '../state/useTravel';
-import { AlertCard, Button, JourneyCard, PlaceField, Preferences, TransportIcon } from '../ui/components';
+import { AlertCard, Button, JourneyCard, PlaceField, TransportIcon } from '../ui/components';
 import DateField from '../ui/DateField';
 import { colors, s } from '../ui/theme';
 export type Travel = ReturnType<typeof useTravel>;
@@ -54,7 +55,7 @@ export function PlanningScreen({ travel, onOpenActive, onDepartures }: { travel:
   }
   return <ScrollView contentContainerStyle={{ padding: 20, width: '100%', maxWidth: 1192, alignSelf: 'center', gap: 16 }} keyboardShouldPersistTaps="handled">
     <Text style={[s.title, { fontSize: 30 }]}>underveis.</Text>
-    <Text accessibilityRole="header" style={s.title}>Hvor vil du reise?</Text>
+    <View style={[s.row,{justifyContent:"space-between"}]}><Text accessibilityRole="header" style={s.title}>Hvor vil du reise?</Text><SettingsButton/></View>
     <View style={[s.row, { flexWrap: "wrap" }]}><Button secondary label="Avganger" onPress={() => onDepartures(false)} /><Button secondary label="Jeg er allerede om bord" onPress={() => onDepartures(true)} /></View>
     {travel.active && <View style={[s.card, { gap: 12 }]}><Text style={s.text}>Du har en aktiv reise. Stopp og fremdrift er bevart.</Text><Button label="Til aktiv reise" onPress={onOpenActive} /><Button secondary label="Avslutt og start på nytt" onPress={travel.stop} /></View>}
     {!travel.active && <View style={s.row}><Button small label="Ekte reiser" secondary={travel.demo} onPress={() => mode(false)} /><Button small label="Prøv demo" secondary={!travel.demo} onPress={() => mode(true)} /></View>}
@@ -66,10 +67,10 @@ export function PlanningScreen({ travel, onOpenActive, onDepartures }: { travel:
         <PlaceField label="Til – reisemål" value={to} onChange={setTo} demo={travel.demo} />
         <StopEditor value={stops} onChange={setStops} demo={travel.demo} />
         <Text style={s.muted}>{when === "now" ? "Dra nå" : date.replace("T", " ")} · {travel.preference === "balanced" ? "Balansert" : travel.preference === "fastest" ? "Raskest" : "Tryggest"}</Text>
-        <Button small secondary label="Reisevalg" onPress={() => setOptionsOpen(!optionsOpen)} />
+        <Button small secondary label="Avreise" onPress={() => setOptionsOpen(!optionsOpen)} />
         {optionsOpen && <>
         {!travel.demo && <><View style={s.row}><Button small label="Dra nå" secondary={when !== 'now'} onPress={() => setWhen('now')} /><Button small label="Velg tidspunkt" secondary={when !== 'later'} onPress={() => setWhen('later')} /></View>{when === 'later' && <DateField value={date} onChange={setDate} />}</>}
-        <Preferences value={travel.preference} onChange={travel.changePreference} /></>}
+        </>}
         {!!error && <Text accessibilityRole="alert" style={s.text}>{error}</Text>}
         <Button label={travel.searching ? 'Finner reiser …' : 'Finn reiser  →'} disabled={travel.searching || !!travel.active} onPress={() => void search()} />
         <View style={[s.row, { flexWrap: 'wrap' }]}>{(['bus', 'water', 'tram', 'rail'] as const).map(mode => <TransportIcon key={mode} mode={mode} />)}</View><Text style={s.muted}>Buss, båt, trikk og tog · Trøndelag</Text>

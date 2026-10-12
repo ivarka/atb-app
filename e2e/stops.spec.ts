@@ -1,3 +1,4 @@
+import { closeDetails, openOptions, scenario, boardPlanned } from './helpers';
 import { expect, test } from '@playwright/test';
 test('flere stopp, opphold, gjenåpning og videre fra nytt sted', async ({ page }) => {
  await page.setViewportSize({ width: 390, height: 844 });
@@ -10,8 +11,8 @@ test('flere stopp, opphold, gjenåpning og videre fra nytt sted', async ({ page 
  await page.getByRole('button', { name: 'Legg til valgt stopp', exact: true }).click();
  await page.getByRole('button', { name: 'Opphold', exact: true }).last().click();
  await page.getByRole('button', { name: 'Finn reiser' }).click();
- await page.getByRole('button', { name: 'Følg reisen' }).first().click();
- await page.getByRole('button', { name: 'Jeg er om bord', exact: true }).click();
+ await page.getByRole('button', { name: 'Velg', exact: true }).first().click();
+ await boardPlanned(page);
  await page.getByRole('button', { name: 'Bekreft passert Studentersamfundet', exact: true }).click();
  await expect(page.getByRole('button', { name: 'Jeg har gått av', exact: true })).toBeVisible();
  await page.getByRole('button', { name: 'Jeg er ved Pirbadet – start opphold', exact: true }).click();
@@ -27,7 +28,7 @@ test('flere stopp, opphold, gjenåpning og videre fra nytt sted', async ({ page 
  await expect(page.getByText('Opphold ved Pirbadet', { exact: true })).toHaveCount(0);
  await expect(page.getByText(/Steg 1 av/).first()).toBeVisible();
  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
- await page.getByRole('button', { name: 'Reisevalg', exact: true }).click();
+ await page.getByRole('button', { name: 'Endre reisen', exact: true }).click();
  await page.getByRole('button', { name: 'Endre stopp', exact: true }).click();
  await page.getByRole('button', { name: '+ Legg til mellomstopp', exact: true }).click();
  await page.getByRole('button', { name: 'Velg Lohove', exact: true }).click();
@@ -42,6 +43,7 @@ test('flere stopp, opphold, gjenåpning og videre fra nytt sted', async ({ page 
  await page.getByRole('button', { name: 'Legg til valgt stopp', exact: true }).click();
  await page.getByRole('button', { name: 'Finn reise med disse stoppene', exact: true }).click();
  await page.getByRole('button', { name: 'Velg denne videre reisen', exact: true }).first().click();
+ await page.getByRole('button',{name:'Se hele reisen →',exact:true}).click();
  await expect(page.getByText(/Senere · Lohove/)).toBeVisible();
 });
 
@@ -88,5 +90,6 @@ test('ankomst til opphold krever ikke besøk av senere stopp', async ({ page }) 
  await page.addInitScript(active => localStorage.setItem('underveis.v1', JSON.stringify({ version: 1, active, preference: 'balanced' })), active);
  await page.goto('/'); await page.getByRole('button', { name: 'Jeg er fremme', exact: true }).click();
  await expect(page.getByText('Opphold ved Studentersamfundet', { exact: true })).toBeVisible();
+ await page.getByRole('button',{name:'Se hele reisen →',exact:true}).click();
  await expect(page.getByText(/Senere · Lohove/)).toBeVisible();
 });

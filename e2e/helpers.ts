@@ -11,3 +11,23 @@ export async function chooseRecentRoute(page: Page) {
  await page.getByRole('textbox',{name:'Til – reisemål',exact:true}).focus();
  await page.getByRole('button',{name:'Testmål',exact:true}).click();
 }
+
+export async function closeDetails(page: import('@playwright/test').Page) {
+ const dialog=page.getByTestId('detail-sheet');
+ if(await dialog.count()){await dialog.getByRole('button',{name:'← Tilbake',exact:true}).click();await dialog.waitFor({state:'detached'});}
+}
+export async function openOptions(page: import('@playwright/test').Page) {
+ await closeDetails(page);
+ await page.getByRole('button',{name:'Endre reisen',exact:true}).click();
+}
+export async function scenario(page: import('@playwright/test').Page,name:string) {
+ await openOptions(page);
+ await page.getByRole('button',{name:'Demo · simuler hendelse',exact:true}).click();
+ await page.getByRole('button',{name,exact:true}).click();
+}
+export async function boardPlanned(page: import('@playwright/test').Page) {
+ await closeDetails(page);
+ const stop=page.getByRole('button',{name:'Jeg er på holdeplassen',exact:true});
+ if(await stop.isVisible())await stop.click();
+ await page.getByRole('button',{name:'Jeg er om bord',exact:true}).click();
+}

@@ -1,3 +1,4 @@
+import { SettingsProvider } from './src/ui/Settings';
 import { DeparturesScreen } from './src/screens/DeparturesScreen';
 import { Departure, Place } from './src/domain/types';
 import React, { useEffect, useState } from 'react';
@@ -25,8 +26,7 @@ function TravelApp() {
     });
     return () => subscription.remove();
   }, [screen, !!travel.active]);
-  if (screen === 'departures') return <DeparturesScreen travel={travel} {...departureOptions} onBack={() => setScreen(travel.active ? 'active' : 'planning')} onOpenActive={() => setScreen('active')} />;
-  return screen === 'active' && travel.active
+  return <SettingsProvider travel={travel}>{screen === 'departures' ? <DeparturesScreen travel={travel} {...departureOptions} onBack={() => setScreen(travel.active ? 'active' : 'planning')} onOpenActive={() => setScreen('active')} /> : screen === 'active' && travel.active
     ? <ActiveScreen travel={travel} onDepartures={openDepartures} onBack={() => setScreen('planning')} />
-    : <PlanningScreen onDepartures={openDepartures} key={travel.restartKey} travel={travel} onOpenActive={() => setScreen('active')} />;
+    : <PlanningScreen onDepartures={openDepartures} key={travel.restartKey} travel={travel} onOpenActive={() => setScreen('active')} />}</SettingsProvider>;
 }

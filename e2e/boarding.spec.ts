@@ -1,3 +1,4 @@
+import { closeDetails, openOptions, scenario, boardPlanned } from './helpers';
 import { expect, test } from '@playwright/test';
 import { boardingFixture } from '../tests/fixtures/boarding';
 
@@ -25,8 +26,9 @@ test('GPS foreslår, registrerer og angrer påstigning uten polling per posisjon
   }, active);
   await page.clock.install({ time: samples[0].timestamp });
   await page.goto('/');
-  await expect(page.getByText('● Følger reisen', { exact: true })).toBeVisible();
+  await openOptions(page);
   await expect(page.getByRole('button', { name: 'Oppdater nå', exact: true })).toBeEnabled();
+  await closeDetails(page);
   const before = requests;
   async function emit(index: number) {
     await page.clock.setFixedTime(samples[index].timestamp);
@@ -39,11 +41,11 @@ test('GPS foreslår, registrerer og angrer påstigning uten polling per posisjon
   for (let i = 4; i < 7; i++) await emit(i);
   await expect(page.getByText(/^Steg .*Om bord på buss 3$/)).toBeVisible();
   await page.getByRole('button', { name: 'Angre påstigning', exact: true }).click();
-  await page.getByRole('button', { name: 'Vis steg for steg', exact: true }).click();
+  await page.getByRole('button', { name: 'Se hele reisen →', exact: true }).click();
   await expect(page.getByText('Vent på buss 3', { exact: true })).toBeVisible();
   for (let i = 0; i < 7; i++) await emit(i);
   await expect(page.getByText('Vi tror du er på buss 3 – stemmer det?')).toHaveCount(0);
-  await page.getByRole('button', { name: 'Jeg er om bord', exact: true }).click();
+  await boardPlanned(page);
   await expect(page.getByText(/^Steg .*Om bord på buss 3$/)).toBeVisible();
 });
 
@@ -58,15 +60,16 @@ test('nektet GPS-tilgang beholder manuell påstigning', async ({ page }) => {
     } });
   }, active);
   await page.goto('/');
+  await page.getByRole('button',{name:'Innstillinger',exact:true}).click();
   await expect(page.getByText('Posisjon mangler. Gi tilgang til posisjon, eller bekreft påstigning manuelt.')).toBeVisible();
-  await page.getByRole('button', { name: 'Reisevalg', exact: true }).click();
-  await page.getByRole('button', { name: 'Slå av automatisk påstigning', exact: true }).click();
+  await page.getByRole('button', { name: 'Av', exact: true }).click();
   await expect(page.getByText('Automatisk påstigning er slått av')).toBeVisible();
-  await page.getByRole('button', { name: 'Jeg er om bord', exact: true }).click();
+  await boardPlanned(page);
   await expect(page.getByText(/^Steg .*Om bord på buss 3$/)).toBeVisible();
   await page.getByRole('button', { name: 'Jeg har gått av', exact: true }).click();
   await expect(page.getByText('Hvor gikk du av?', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Jeg gikk av på Stopp 1', exact: true }).click();
   await expect(page.getByText('Må oppdateres fra der du er', { exact: true })).toBeVisible();
+  await openOptions(page);
   await expect(page.getByRole('button', { name: 'Endre startsted', exact: true })).toBeVisible();
 });

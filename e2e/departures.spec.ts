@@ -28,12 +28,13 @@ test('tom planlegging, sist brukte, tastatur og skjulte mellomstopp',async({page
 test('uplanlagt påstigning uten plan, gjenåpning og godkjent videreplan',async({page})=>{
  await page.setViewportSize({width:390,height:844});await page.goto('/');await page.getByRole('button',{name:'Prøv demo',exact:true}).click();
  await page.getByRole('button',{name:'Jeg er allerede om bord',exact:true}).click();
- const row=page.getByTestId('departure-row').first();await expect(row).toContainText('3 mot Sentrum');
- await row.getByRole('button',{name:'Jeg er om bord på denne',exact:true}).click();
+ const row=page.getByTestId('departure-row').first();await expect(row).toHaveAccessibleName(/3 mot Sentrum/);
+ await row.click();await page.getByRole('button',{name:'Jeg er om bord på denne',exact:true}).click();
  await page.getByRole('button',{name:'Bekreft at jeg er om bord',exact:true}).click();
  await expect(page.getByText('Bekreftet påstigning',{exact:true})).toBeVisible();
  await expect(page.getByTestId('ride-option')).toHaveCount(0);
  await page.reload();await expect(page.getByText('Bekreftet påstigning',{exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'Velg neste stopp',exact:true}).click();
  await page.getByRole('button',{name:'Neste stopp er Studentersamfundet',exact:true}).click();
  await expect(page.getByTestId('ride-option').first()).toBeVisible();
  await page.screenshot({path:'test-results/onboard-106-mobile.png',fullPage:true});
@@ -45,7 +46,8 @@ test('uplanlagt påstigning uten plan, gjenåpning og godkjent videreplan',async
 
 test('planlegg med valgt avgang bekrefter ikke påstigning',async({page})=>{
  await page.goto('/');await page.getByRole('button',{name:'Prøv demo',exact:true}).click();await page.getByRole('button',{name:'Avganger',exact:true}).click();
- await page.getByTestId('departure-row').first().getByRole('button',{name:'Planlegg med denne',exact:true}).click();
+ await page.getByTestId('departure-row').first().click();
+ await page.getByRole('button',{name:'Planlegg med denne',exact:true}).click();
  await page.getByRole('button',{name:'Finn reise med denne avgangen',exact:true}).click();
  await page.getByRole('button',{name:'Velg denne reisen',exact:true}).first().click();
  await expect(page.getByRole('button',{name:'Jeg er om bord',exact:true})).toBeVisible();
@@ -60,7 +62,9 @@ test('avgangstavle viser datakvalitet og pauser uten synlig tavle',async({page,c
  await page.clock.install({time:now});await page.goto('/');await page.getByRole('button',{name:'Avganger',exact:true}).click();
  await page.getByRole('textbox',{name:'Holdeplass',exact:true}).focus();await page.getByRole('button',{name:'Teststart',exact:true}).click();
  await expect(page.getByTestId('departure-row')).toHaveCount(2);expect(calls).toBe(1);
- await expect(page.getByTestId('departure-row').first()).toContainText('2 min forsinket');
+ await page.getByTestId('departure-row').first().click();
+ await expect(page.getByText(/2 min forsinket/)).toBeVisible();
+ await page.getByRole('dialog').getByRole('button',{name:'← Tilbake',exact:true}).click();
  await expect(page.getByTestId('departure-row').last()).toContainText('Innstilt');
  await expect(page.getByTestId('departure-row').last().getByRole('button')).toHaveCount(0);
  await page.clock.fastForward(31000);await expect.poll(()=>calls).toBe(2);
@@ -85,6 +89,7 @@ test('bekreftet transport og mellomstopp beholdes ved API-feil og gjenåpning',a
  await page.reload();await expect(page.getByRole('alert')).toBeVisible();
  const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('underveis.v1')!).active);
  expect(saved.progress.phase).toBe('onboard');expect(saved.pendingRide.departure.id).toBe(active.pendingRide!.departure.id);expect(saved.stops).toEqual(active.stops);
+ await page.getByRole('button',{name:'Endre reisen',exact:true}).click();
  await page.getByRole('button',{name:'Avslutt og start på nytt',exact:true}).click();
  await expect(page.getByRole('textbox',{name:'Fra',exact:true})).toBeVisible();
  expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('underveis.v1')!).active)).toBeNull();
